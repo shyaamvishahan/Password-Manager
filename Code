@@ -1,0 +1,124 @@
+MySQL:
+
+CREATE DATABASE password_manager;
+USE password_manager;
+
+CREATE TABLE passwords (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    website VARCHAR(255) NOT NULL,
+    username VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL
+);
+
+Python:
+
+import tkinter as tk
+from tkinter import messagebox
+import mysql.connector
+from mysql.connector import Error
+
+
+# Function to create a connection to the MySQL database
+def create_connection():
+    try:
+        connection = mysql.connector.connect(
+            host='localhost',
+            database='password_manager',
+            user='root',
+            password='root'  # change if needed
+        )
+        if connection.is_connected():
+            return connection
+    except Error as e:
+        messagebox.showerror("Database Error", f"Error: {e}")
+    return None
+
+
+# Function to add a new password to the database
+def add_password():
+    website = website_entry.get()
+    username = username_entry.get()
+    password = password_entry.get()
+
+    if not website or not username or not password:
+        messagebox.showwarning("Input Error", "All fields are required")
+        return
+
+    connection = create_connection()
+    if connection:
+        try:
+            cursor = connection.cursor()
+            cursor.execute(
+                "INSERT INTO passwords (website, username, password) VALUES (%s, %s, %s)",
+                (website, username, password)
+            )
+            connection.commit()
+            messagebox.showinfo("Success", "Password added successfully")
+
+            # Clear fields after insert
+            website_entry.delete(0, tk.END)
+            username_entry.delete(0, tk.END)
+            password_entry.delete(0, tk.END)
+
+        except Error as e:
+            messagebox.showerror("Database Error", f"Error: {e}")
+        finally:
+            cursor.close()
+            connection.close()
+
+
+# Function to view all saved passwords
+def view_passwords():
+    connection = create_connection()
+    if connection:
+        try:
+            cursor = connection.cursor()
+            cursor.execute("SELECT website, username, password FROM passwords")
+            rows = cursor.fetchall()
+
+            if rows:
+                result = ""
+                for row in rows:
+                    result += f"Website: {row[0]}\nUsername: {row[1]}\nPassword: {row[2]}\n\n"
+                messagebox.showinfo("Saved Passwords", result)
+            else:
+                messagebox.showinfo("Saved Passwords", "No passwords found")
+
+        except Error as e:
+            messagebox.showerror("Database Error", f"Error: {e}")
+        finally:
+            cursor.close()
+            connection.close()
+
+
+# Create the main application window
+root = tk.Tk()
+root.title("Password Manager")
+root.geometry("400x250")
+
+
+# Create and place widgets
+tk.Label(root, text="Website").grid(row=0, column=0, padx=10, pady=5)
+tk.Label(root, text="Username").grid(row=1, column=0, padx=10, pady=5)
+tk.Label(root, text="Password").grid(row=2, column=0, padx=10, pady=5)
+
+website_entry = tk.Entry(root, width=30)
+website_entry.grid(row=0, column=1, padx=10, pady=5)
+
+username_entry = tk.Entry(root, width=30)
+username_entry.grid(row=1, column=1, padx=10, pady=5)
+
+password_entry = tk.Entry(root, width=30, show='*')
+password_entry.grid(row=2, column=1, padx=10, pady=5)
+
+tk.Button(root, text="Add Password", command=add_password).grid(
+    row=3, column=0, columnspan=2, pady=10
+)
+
+tk.Button(root, text="View Passwords", command=view_passwords).grid(
+    row=4, column=0, columnspan=2, pady=5
+)
+
+
+# Run the application
+root.mainloop()
